@@ -73,78 +73,14 @@ function photosHandler( r ){
 hello.init({
 	instagram : INSTAGRAM_CLIENT_ID
 },{
-	scope : 'photos',
+	scope : 'user_profile,user_media',
 	redirect_uri:'../redirect.html'
 });
 </script>
 
 
-<h2>Like</h2>
-
-<button onclick="getPopular()">Get popular photos</button>
-
-<p>Once photos are loaded, click the photo to 'like'</p>
-
-<div id="popular"></div>
-
-<style>
-.liked{
-	border:5px solid lime;
-}
-</style>
-<script class="pre">
-function getPopular(){
-
-	var instagram = hello('instagram');
-
-	instagram.login({scope:'publish'}).then(function(){
-
-		// Custom instagram endpoint
-		return instagram.api('media/popular');
-	})
-	.then(popularMediaHandler, errorHandler)
-}
-
-
-function popularMediaHandler( r ){
-
-	var popularContainer = document.getElementById( 'popular' );
-
-	r.data.forEach(function(pic){
-
-		var img = document.createElement('img');
-		img.title = pic.caption.text;
-		img.src = pic.images.thumbnail.url;
-		img.className = ( pic.user_has_liked ? 'liked' : '' );
-
-		img.onclick = likePic.bind( pic, img );
-
-		popularContainer.appendChild( img );
-
-	});
-
-}
-
-
-function likePic(img){
-
-	var pic = this;
-
-	var method = !pic.user_has_liked ? 'post' : 'delete';
-
-	hello( 'instagram' ).api( 'me/like', method, {
-		id: pic.id
-	})
-	.then(function(r) {
-		if (r.meta.code === 200) {
-			pic.user_has_liked = method === 'post';
-			img.className = ( pic.user_has_liked ? 'liked' : '' );
-		}
-	}, console.error.bind(console));
-};
-
-
-</script>
+<h2>Note</h2>
+<p><strong>Instagram Basic Display API is read-only.</strong> Like/unlike functionality and popular media endpoints are no longer available. This demo now focuses on retrieving user profile and media.</p>
 
 
 <script>
