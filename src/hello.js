@@ -1349,12 +1349,23 @@ hello.utils.extend(hello.utils, {
 
 			// Remove any addition information
 			// E.g. p.state = 'facebook.page';
+			var pState;
+			
+			// Check if this is Amazon and handle its specific state encoding
+			if (p && p.state && p.state.match && p.state.match('amazon')) {
+				// Amazon requires special decoding
+				pState = decodeURIComponent(escape(p.state));
+				pState = pState.replace(/&#34;/g, '"');
+			} else {
+				pState = p.state;
+			}
+			
 			try {
-				var a = JSON.parse(p.state);
+				var a = JSON.parse(pState);
 				_this.extend(p, a);
 			}
 			catch (e) {
-				var stateDecoded = decodeURIComponent(p.state);
+				var stateDecoded = decodeURIComponent(pState);
 				try {
 					var b = JSON.parse(stateDecoded);
 					_this.extend(p, b);
