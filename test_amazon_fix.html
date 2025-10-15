@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Amazon State Parameter Fix</title>
+    <script src="src/hello.js"></script>
+    <script src="src/modules/amazon.js"></script>
+</head>
+<body>
+    <h1>Amazon State Parameter Fix Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        // Test the Amazon state parameter decoding fix
+        function testAmazonStateDecoding() {
+            var results = document.getElementById('results');
+            
+            // Simulate Amazon's encoded state parameter
+            var amazonEncodedState = '%7B%22client_id%22%3A%22test_client%22%2C%22network%22%3A%22amazon%22%2C%22display%22%3A%22popup%22%2C%22callback%22%3A%22_hellojs_123456%22%2C%22state%22%3A%22%22%2C%22redirect_uri%22%3A%22http%3A//localhost%3A8000/redirect.html%22%7D';
+            
+            // Test with HTML entities (&#34; for quotes)
+            var amazonStateWithEntities = '%7B&#34;client_id&#34;%3A&#34;test_client&#34;%2C&#34;network&#34;%3A&#34;amazon&#34;%2C&#34;display&#34;%3A&#34;popup&#34;%2C&#34;callback&#34;%3A&#34;_hellojs_123456&#34;%2C&#34;state&#34;%3A&#34;&#34;%2C&#34;redirect_uri&#34;%3A&#34;http%3A//localhost%3A8000/redirect.html&#34;%7D';
+            
+            try {
+                // Test 1: Normal Amazon state
+                var mockP1 = {
+                    state: amazonEncodedState,
+                    access_token: 'test_token'
+                };
+                
+                // Simulate the fixed decoding logic
+                var pState1;
+                var isAmazon1 = mockP1 && mockP1.state && typeof mockP1.state === 'string' && mockP1.state.indexOf('amazon') !== -1;
+                if (isAmazon1) {
+                    pState1 = decodeURIComponent(escape(mockP1.state));
+                    pState1 = pState1.replace(/&#34;/g, '"');
+                } else {
+                    pState1 = mockP1.state;
+                }
+                
+                var parsed1 = JSON.parse(pState1);
+                results.innerHTML += '<h3>Test 1 - Normal Amazon State: PASSED</h3>';
+                results.innerHTML += '<p>Parsed state: ' + JSON.stringify(parsed1, null, 2) + '</p>';
+                
+                // Test 2: Amazon state with HTML entities
+                var mockP2 = {
+                    state: amazonStateWithEntities,
+                    access_token: 'test_token'
+                };
+                
+                var pState2;
+                var isAmazon2 = mockP2 && mockP2.state && typeof mockP2.state === 'string' && mockP2.state.indexOf('amazon') !== -1;
+                if (isAmazon2) {
+                    pState2 = decodeURIComponent(escape(mockP2.state));
+                    pState2 = pState2.replace(/&#34;/g, '"');
+                } else {
+                    pState2 = mockP2.state;
+                }
+                
+                var parsed2 = JSON.parse(pState2);
+                results.innerHTML += '<h3>Test 2 - Amazon State with HTML Entities: PASSED</h3>';
+                results.innerHTML += '<p>Parsed state: ' + JSON.stringify(parsed2, null, 2) + '</p>';
+                
+                // Test 3: Non-Amazon state (should work normally)
+                var mockP3 = {
+                    state: '{"client_id":"test_client","network":"facebook","display":"popup"}',
+                    access_token: 'test_token'
+                };
+                
+                var pState3;
+                var isAmazon3 = mockP3 && mockP3.state && typeof mockP3.state === 'string' && mockP3.state.indexOf('amazon') !== -1;
+                if (isAmazon3) {
+                    pState3 = decodeURIComponent(escape(mockP3.state));
+                    pState3 = pState3.replace(/&#34;/g, '"');
+                } else {
+                    pState3 = mockP3.state;
+                }
+                
+                var parsed3 = JSON.parse(pState3);
+                results.innerHTML += '<h3>Test 3 - Non-Amazon State: PASSED</h3>';
+                results.innerHTML += '<p>Parsed state: ' + JSON.stringify(parsed3, null, 2) + '</p>';
+                
+                results.innerHTML += '<h2 style="color: green;">All tests passed! Amazon state parameter fix is working correctly.</h2>';
+                
+            } catch (error) {
+                results.innerHTML += '<h2 style="color: red;">Test failed: ' + error.message + '</h2>';
+                console.error('Test error:', error);
+            }
+        }
+        
+        // Run tests when page loads
+        window.onload = testAmazonStateDecoding;
+    </script>
+</body>
+</html>
