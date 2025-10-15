@@ -171,9 +171,15 @@
 		if (o.errors) {
 			var e = o.errors[0];
 			o.error = {
-				code: 'request_failed',
-				message: e.message
+				code: e.code || 'request_failed',
+				message: e.message || 'Twitter API request failed'
 			};
+			
+			// Add specific handling for common Twitter OAuth errors
+			if (e.code === 401 || e.code === '401') {
+				o.error.code = 'unauthorized';
+				o.error.message = 'Twitter authentication failed. Please check your access token.';
+			}
 		}
 	}
 
