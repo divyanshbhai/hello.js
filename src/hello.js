@@ -1359,11 +1359,18 @@ hello.utils.extend(hello.utils, {
 					// Amazon requires special decoding: decodeURIComponent(escape()) and HTML entity replacement
 					pState = decodeURIComponent(escape(p.state));
 					// Replace common HTML entities that Amazon might use
-					pState = pState.replace(/&#34;/g, '"');
-					pState = pState.replace(/&#39;/g, "'");
-					pState = pState.replace(/&amp;/g, '&');
-					pState = pState.replace(/&lt;/g, '<');
-					pState = pState.replace(/&gt;/g, '>');
+					var htmlEntities = {
+						'&#34;': '"',
+						'&#39;': "'",
+						'&amp;': '&',
+						'&lt;': '<',
+						'&gt;': '>'
+					};
+					for (var entity in htmlEntities) {
+						if (htmlEntities.hasOwnProperty(entity)) {
+							pState = pState.replace(new RegExp(entity, 'g'), htmlEntities[entity]);
+						}
+					}
 				} catch (decodeError) {
 					// If Amazon-specific decoding fails, fall back to original state
 					console.warn('Amazon state decoding failed, using original state:', decodeError);
