@@ -1352,8 +1352,10 @@ hello.utils.extend(hello.utils, {
 			var pState;
 			
 			// Check if this is Amazon and handle its specific state encoding
-			if (p && p.state && p.state.match && p.state.match('amazon')) {
-				// Amazon requires special decoding
+			// Amazon returns state in a double-encoded format that needs special handling
+			var isAmazon = p && p.state && typeof p.state === 'string' && p.state.indexOf('amazon') !== -1;
+			if (isAmazon) {
+				// Amazon requires special decoding: decodeURIComponent(escape()) and HTML entity replacement
 				pState = decodeURIComponent(escape(p.state));
 				pState = pState.replace(/&#34;/g, '"');
 			} else {
