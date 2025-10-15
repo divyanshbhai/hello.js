@@ -13,7 +13,8 @@
 				response_type: 'code'
 			},
 
-			scope: {
+			// Provider scope mapping
+			scope_map: {
 				email: 'user:email'
 			},
 

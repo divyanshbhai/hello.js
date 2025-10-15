@@ -26,11 +26,11 @@
 
 			login: function(p) {
 				// OAuth2 non-standard adjustments
-				p.qs.scope = '';
+				p.query.scope = '';
 
 				// Should this be run as OAuth1?
 				// If the redirect_uri is is HTTP (non-secure) then its required to revert to the OAuth1 endpoints
-				var redirect = decodeURIComponent(p.qs.redirect_uri);
+				var redirect = decodeURIComponent(p.query.redirect_uri);
 				if (redirect.indexOf('http:') === 0 && redirect.indexOf('http://localhost/') !== 0) {
 
 					// Override the dropbox OAuth settings.
@@ -52,7 +52,7 @@
 
 				Follow request https://forums.dropbox.com/topic.php?id=106505
 
-				p.qs.response_type = 'code';
+				p.query.response_type = 'code';
 				oauth: {
 					version: 2,
 					auth: 'https://www.dropbox.com/1/oauth2/authorize',

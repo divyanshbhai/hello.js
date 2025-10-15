@@ -186,14 +186,15 @@ hello.utils.extend(hello, {
 		// Local vars
 		var url;
 
-		// Get all the custom options and store to be appended to the querystring
-		var qs = utils.diffKey(p.options, _this.settings);
+	// Get all the custom options and store to be appended to the querystring
+	var query = utils.diffKey(p.options, _this.settings);
 
-		// Merge/override options with app defaults
-		var opts = p.options = utils.merge(_this.settings, p.options || {});
+	// Merge/override options with app defaults
+	var opts = p.options = utils.merge(_this.settings, p.options || {});
 
-		// Merge/override options with app defaults
-		opts.popup = utils.merge(_this.settings.popup, p.options.popup || {});
+	// Merge popup defaults from settings, provider and invocation
+	// provider.popup will be merged in below after provider is resolved
+	opts.popup = utils.merge(_this.settings.popup, p.options.popup || {});
 
 		// Network
 		p.network = p.network || _this.settings.default_service;
@@ -286,8 +287,9 @@ hello.utils.extend(hello, {
 		// Include default scope settings (cloned).
 		var scope = _this.settings.scope ? [_this.settings.scope.toString()] : [];
 
-		// Extend the providers scope list with the default
-		var scopeMap = utils.merge(_this.settings.scope_map, provider.scope || {});
+	// Extend the providers scope list with the default
+	// Support legacy provider.scope while preferring provider.scope_map
+	var providerScopeMap = utils.merge({}, provider.scope_map || provider.scope || {});
 
 		// Add user defined scopes...
 		if (opts.scope) {
@@ -308,12 +310,25 @@ hello.utils.extend(hello, {
 		scope = utils.unique(scope).filter(filterEmpty);
 
 		// Save the the scopes to the state with the names that they were requested with.
-		p.qs.state.scope = scope.join(',');
+		p.query = utils.merge(query, {});
+		p.query.state = p.query.state || {};
+		p.query.state.scope = scope.join(',');
+
+		// Explicit blacklist of standardized scopes
+		// Standardized scopes defined in settings.scope_map are blacklisted unless
+		// the provider explicitly defines a mapping for them in provider.scope_map.
+		var defaultScopeMap = _this.settings.scope_map || {};
+		scope = scope.filter(function(item) {
+			if (defaultScopeMap && defaultScopeMap.hasOwnProperty(item)) {
+				// Only include if provider explicitly defines it
+				return providerScopeMap && providerScopeMap.hasOwnProperty(item);
+			}
+			return true;
+		});
 
 		// Map scopes to the providers naming convention
 		scope = scope.map(function(item) {
-			// Does this have a mapping?
-			return (item in scopeMap) ? scopeMap[item] : item;
+			return (item in providerScopeMap) ? providerScopeMap[item] : item;
 		});
 
 		// Stringify and Arrayify so that double mapped scopes are given the chance to be formatted
@@ -323,8 +338,8 @@ hello.utils.extend(hello, {
 		// Format remove duplicates and empty values
 		scope = utils.unique(scope).filter(filterEmpty);
 
-		// Join with the expected scope delimiter into a string
-		p.qs.scope = scope.join(provider.scope_delim || ',');
+	// Join with the expected scope delimiter into a string
+	p.query.scope = scope.join(provider.scope_delim || ',');
 
 		// Is the user already signed in with the appropriate scopes, valid access_token?
 		if (opts.force === false) {
@@ -354,52 +369,61 @@ hello.utils.extend(hello, {
 		}
 
 		// Bespoke
-		// Override login querystrings from auth_options
+		// Allow provider to define default popup params (provider.popup)
+		if (provider.popup) {
+			opts.popup = utils.merge(opts.popup, provider.popup || {});
+		}
+
+		// Override login querystrings from auth_options (legacy behaviour)
+		// The provider.login function now receives p with p.query instead of p.qs
 		if ('login' in provider && typeof (provider.login) === 'function') {
 			// Format the paramaters according to the providers formatting function
 			provider.login(p);
 		}
 
 		// Add OAuth to state
+		// Allow caller to override provider oauth endpoints via opts.oauth
+		var oauth = utils.merge({}, provider.oauth || {}, opts.oauth || {});
+
 		// Where the service is going to take advantage of the oauth_proxy
 		if (!/\btoken\b/.test(responseType) ||
-		parseInt(provider.oauth.version, 10) < 2 ||
-		(opts.display === 'none' && provider.oauth.grant && session && session.refresh_token)) {
+			parseInt(oauth.version, 10) < 2 ||
+			(opts.display === 'none' && oauth.grant && session && session.refresh_token)) {
 
-			// Add the oauth endpoints
-			p.qs.state.oauth = provider.oauth;
+			// Add the oauth endpoints (possibly overridden)
+			p.query.state.oauth = oauth;
 
 			// Add the proxy url
-			p.qs.state.oauth_proxy = opts.oauth_proxy;
+			p.query.state.oauth_proxy = opts.oauth_proxy;
 
 		}
 
 		// Convert state to a string
-		if (provider.oauth.base64_state) {
-			p.qs.state = window.btoa(JSON.stringify(p.qs.state));
+		if (oauth.base64_state) {
+			p.query.state = window.btoa(JSON.stringify(p.query.state));
 		}
 		else {
-			p.qs.state = encodeURIComponent(JSON.stringify(p.qs.state));
+			p.query.state = encodeURIComponent(JSON.stringify(p.query.state));
 		}
 
 		// URL
-		if (parseInt(provider.oauth.version, 10) === 1) {
+		if (parseInt(oauth.version, 10) === 1) {
 
 			// Turn the request to the OAuth Proxy for 3-legged auth
-			url = utils.qs(opts.oauth_proxy, p.qs, encodeFunction);
+			url = utils.qs(opts.oauth_proxy, p.query, encodeFunction);
 		}
 
 		// Refresh token
-		else if (opts.display === 'none' && provider.oauth.grant && session && session.refresh_token) {
+		else if (opts.display === 'none' && oauth.grant && session && session.refresh_token) {
 
 			// Add the refresh_token to the request
-			p.qs.refresh_token = session.refresh_token;
+			p.query.refresh_token = session.refresh_token;
 
 			// Define the request path
-			url = utils.qs(opts.oauth_proxy, p.qs, encodeFunction);
+			url = utils.qs(opts.oauth_proxy, p.query, encodeFunction);
 		}
 		else {
-			url = utils.qs(provider.oauth.auth, p.qs, encodeFunction);
+			url = utils.qs(oauth.auth, p.query, encodeFunction);
 		}
 
 		// Broadcast this event as an auth:init

@@ -14,8 +14,7 @@
 			// Refresh the access_token once expired
 			refresh: true,
 
-			scope: {
-				basic: 'r_basicprofile',
+			scope_map: {
 				email: 'r_emailaddress',
 				files: '',
 				friends: '',

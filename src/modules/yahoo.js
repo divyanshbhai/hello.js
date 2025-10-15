@@ -22,7 +22,7 @@
 				p.options.popup.width = 560;
 
 				// Yahoo throws an parameter error if for whatever reason the state.scope contains a comma, so lets remove scope
-				try {delete p.qs.state.scope;}
+				try {delete p.query.state.scope;}
 				catch (e) {}
 			},
 

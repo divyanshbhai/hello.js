@@ -14,7 +14,7 @@
 
 			// See: https://developer.spotify.com/web-api/using-scopes/
 			scope_delim: ' ',
-			scope: {
+			scope_map: {
 				basic: '',
 				photos: '',
 				friends: 'user-follow-read',

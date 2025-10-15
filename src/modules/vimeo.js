@@ -16,7 +16,7 @@
 				// Instruct node-oauth-shim to pass an extra Authorization header when granting
 				// Authorization: basic base64(client_id:cient_secret)
 				// https://developer.vimeo.com/api/authentication#generate-redirect
-				p.qs.state.authorisation = 'header';
+				p.query.state.authorisation = 'header';
 			},
 
 			xhr: function(p) {
@@ -34,7 +34,7 @@
 			},
 
 			// See https://developer.vimeo.com/api/authentication#scopes
-			scope: {
+			scope_map: {
 				basic: 'public',
 				videos: 'public private',
 				publish: 'create edit delete interact',
