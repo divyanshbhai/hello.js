@@ -1409,6 +1409,7 @@ hello.utils.extend(hello.utils, {
 		else if ('oauth_redirect' in p) {
 			var url = decodeURIComponent(p.oauth_redirect);
 
+			// Validate URL to prevent XSS attacks
 			if (isValidUrl(url)) {
 				location.assign(url);
 			}
