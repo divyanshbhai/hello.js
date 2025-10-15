@@ -9,7 +9,7 @@
 			oauth: {
 				// See: http://instagram.com/developer/authentication/
 				version: 2,
-				auth: 'https://instagram.com/oauth/authorize/',
+				auth: 'https://www.instagram.com/oauth/authorize/',
 				grant: 'https://api.instagram.com/oauth/access_token'
 			},
 
