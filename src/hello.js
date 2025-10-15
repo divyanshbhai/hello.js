@@ -1312,12 +1312,14 @@ hello.utils.extend(hello.utils, {
 				// Add this path as the redirect_uri
 				p.redirect_uri = state.redirect_uri || location.href.replace(/[\?\#].*$/, '');
 
-				// Redirect to the host
-				var path = _this.qs(state.oauth_proxy, p);
+				// Validate oauth_proxy URL to prevent XSS attacks
+				if (state.oauth_proxy && isValidUrl(state.oauth_proxy)) {
+					// Redirect to the host
+					var path = _this.qs(state.oauth_proxy, p);
 
-
-				if (isValidUrl(path)) {
-					location.assign(path);
+					if (isValidUrl(path)) {
+						location.assign(path);
+					}
 				}
 
 				return;
