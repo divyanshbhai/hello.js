@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Instagram Login Test - Issue #8 Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        button { padding: 10px 20px; margin: 10px 0; font-size: 16px; }
+        .result { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .error { background-color: #ffebee; color: #c62828; }
+        .success { background-color: #e8f5e8; color: #2e7d32; }
+        .info { background-color: #e3f2fd; color: #1565c0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Instagram Login Test - Issue #8 Fix</h1>
+        
+        <p>This test verifies that the Instagram login flow now correctly redirects to the proper authorization endpoint.</p>
+        
+        <button onclick="testInstagramLogin()">Test Instagram Login</button>
+        <button onclick="testInstagramAuth()">Test Auth Response</button>
+        <button onclick="clearResults()">Clear Results</button>
+        
+        <div id="results"></div>
+        
+        <h2>Expected Behavior:</h2>
+        <ul>
+            <li>Login should redirect to <code>https://www.instagram.com/oauth/authorize</code></li>
+            <li>Should not skip authorization and go directly to redirect URI</li>
+            <li>Should return proper access tokens after authorization</li>
+        </ul>
+        
+        <h2>Test Instructions:</h2>
+        <ol>
+            <li>Click "Test Instagram Login" to initiate the login flow</li>
+            <li>Check that the popup/redirect goes to the correct Instagram authorization URL</li>
+            <li>Complete the authorization process</li>
+            <li>Verify that tokens are properly returned</li>
+        </ol>
+    </div>
+
+    <!-- Include HelloJS files -->
+    <script src="src/hello.polyfill.js"></script>
+    <script src="src/hello.js"></script>
+    <script src="src/modules/instagram.js"></script>
+
+    <script>
+        // Initialize HelloJS with a test client ID
+        // Note: Replace with actual Instagram client ID for testing
+        hello.init({
+            instagram: 'YOUR_INSTAGRAM_CLIENT_ID_HERE'
+        }, {
+            redirect_uri: window.location.href.split('#')[0]
+        });
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        function testInstagramLogin() {
+            log('Starting Instagram login test...', 'info');
+            
+            // Test the login flow
+            hello('instagram').login({
+                scope: 'user_profile,user_media'
+            }).then(function(auth) {
+                log('✅ Login successful!', 'success');
+                log(`Network: ${auth.network}`, 'success');
+                log(`Access Token: ${auth.authResponse.access_token ? 'Present' : 'Missing'}`, 
+                    auth.authResponse.access_token ? 'success' : 'error');
+                
+                if (auth.authResponse.access_token) {
+                    log('✅ Access token received - login flow working correctly!', 'success');
+                } else {
+                    log('❌ No access token received - there may still be an issue', 'error');
+                }
+            }).catch(function(error) {
+                log('❌ Login failed:', 'error');
+                log(`Error: ${error.error ? error.error.message : JSON.stringify(error)}`, 'error');
+            });
+        }
+
+        function testInstagramAuth() {
+            const auth = hello('instagram').getAuthResponse();
+            
+            if (auth && auth.access_token) {
+                log('✅ Current auth response found:', 'success');
+                log(`Access Token: ${auth.access_token.substring(0, 20)}...`, 'success');
+                log(`Expires: ${new Date(auth.expires * 1000).toLocaleString()}`, 'success');
+                
+                // Test API call
+                hello('instagram').api('me').then(function(profile) {
+                    log('✅ API call successful:', 'success');
+                    log(`User: ${profile.username || profile.name || 'Unknown'}`, 'success');
+                }).catch(function(error) {
+                    log('❌ API call failed:', 'error');
+                    log(`Error: ${error.error ? error.error.message : JSON.stringify(error)}`, 'error');
+                });
+            } else {
+                log('❌ No current auth response found. Please login first.', 'error');
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Listen for auth events
+        hello.on('auth.login', function(auth) {
+            log(`🔔 Auth login event: ${auth.network}`, 'info');
+        });
+
+        hello.on('auth.logout', function(auth) {
+            log(`🔔 Auth logout event: ${auth.network}`, 'info');
+        });
+
+        // Initial log
+        log('Instagram login test page loaded. Ready for testing.', 'info');
+        log('⚠️ Note: You need to set a valid Instagram client ID in the code to test properly.', 'info');
+    </script>
+</body>
+</html>
