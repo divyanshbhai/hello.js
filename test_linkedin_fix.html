@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LinkedIn OAuth Test</title>
+    <script src="src/hello.polyfill.js"></script>
+    <script src="src/hello.js"></script>
+    <script src="src/modules/linkedin.js"></script>
+</head>
+<body>
+    <h1>LinkedIn OAuth Test</h1>
+    <button id="login-btn" onclick="testLinkedInLogin()">Test LinkedIn Login</button>
+    <div id="result"></div>
+    
+    <script>
+        // Initialize hello.js with LinkedIn
+        hello.init({
+            linkedin: 'test-client-id' // Replace with actual client ID for testing
+        }, {
+            redirect_uri: window.location.href.split('#')[0],
+            oauth_proxy: 'https://auth-server.herokuapp.com/proxy'
+        });
+        
+        function testLinkedInLogin() {
+            console.log('Testing LinkedIn login...');
+            hello('linkedin').login().then(function(auth) {
+                console.log('Login successful:', auth);
+                document.getElementById('result').innerHTML = 'Login successful!';
+                
+                // Test API call
+                return hello('linkedin').api('me');
+            }).then(function(profile) {
+                console.log('Profile:', profile);
+                document.getElementById('result').innerHTML += '<br>Profile loaded: ' + profile.name;
+            }).catch(function(error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = 'Error: ' + JSON.stringify(error);
+            });
+        }
+        
+        // Listen for auth events
+        hello.on('auth.login', function(auth) {
+            console.log('Auth login event:', auth);
+        });
+        
+        hello.on('auth.failed', function(error) {
+            console.log('Auth failed event:', error);
+        });
+    </script>
+</body>
+</html>

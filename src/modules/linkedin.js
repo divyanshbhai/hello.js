@@ -7,68 +7,74 @@
 			oauth: {
 				version: 2,
 				response_type: 'code',
-				auth: 'https://www.linkedin.com/uas/oauth2/authorization',
-				grant: 'https://www.linkedin.com/uas/oauth2/accessToken'
+				auth: 'https://www.linkedin.com/oauth/v2/authorization',
+				grant: 'https://www.linkedin.com/oauth/v2/accessToken'
 			},
 
 			// Refresh the access_token once expired
 			refresh: true,
 
 			scope: {
-				basic: 'r_basicprofile',
+				basic: 'r_liteprofile',
 				email: 'r_emailaddress',
 				files: '',
 				friends: '',
 				photos: '',
-				publish: 'w_share',
-				publish_files: 'w_share',
-				share: '',
+				publish: 'w_member_social',
+				publish_files: 'w_member_social',
+				share: 'w_member_social',
 				videos: '',
 				offline_access: ''
 			},
 			scope_delim: ' ',
 
-			base: 'https://api.linkedin.com/v1/',
+			base: 'https://api.linkedin.com/v2/',
 
 			get: {
-				me: 'people/~:(picture-url,first-name,last-name,id,formatted-name,email-address)',
+				me: 'people/~:(id,firstName,lastName,profilePicture(displayImage~:playableStreams))',
+				'me/email': 'emailAddress?q=members&projection=(elements*(handle~))',
 
-				// See: http://developer.linkedin.com/documents/get-network-updates-and-statistics-api
-				'me/share': 'people/~/network/updates?count=@{limit|250}'
+				// See: LinkedIn v2 API documentation
+				'me/share': 'shares?q=owners&owners=@{owner|urn:li:person:~}&count=@{limit|250}'
 			},
 
 			post: {
 
-				// See: https://developer.linkedin.com/documents/api-requests-json
+				// See: LinkedIn v2 API documentation for shares
 				'me/share': function(p, callback) {
 					var data = {
+						author: 'urn:li:person:' + (p.authResponse.user_id || '~'),
+						lifecycleState: 'PUBLISHED',
+						specificContent: {
+							'com.linkedin.ugc.ShareContent': {
+								shareCommentary: {
+									text: p.data.message || ''
+								},
+								shareMediaCategory: 'NONE'
+							}
+						},
 						visibility: {
-							code: 'anyone'
+							'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
 						}
 					};
 
-					if (p.data.id) {
-
-						data.attribution = {
-							share: {
-								id: p.data.id
+					if (p.data.link) {
+						data.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = 'ARTICLE';
+						data.specificContent['com.linkedin.ugc.ShareContent'].media = [{
+							status: 'READY',
+							description: {
+								text: p.data.description || ''
+							},
+							originalUrl: p.data.link,
+							title: {
+								text: p.data.title || ''
 							}
-						};
-
-					}
-					else {
-						data.comment = p.data.message;
-						if (p.data.picture && p.data.link) {
-							data.content = {
-								'submitted-url': p.data.link,
-								'submitted-image-url': p.data.picture
-							};
-						}
+						}];
 					}
 
 					p.data = JSON.stringify(data);
 
-					callback('people/~/shares?format=json');
+					callback('ugcPosts');
 				},
 
 				'me/like': like
@@ -148,10 +154,31 @@
 			return;
 		}
 
-		o.first_name = o.firstName;
-		o.last_name = o.lastName;
+		// Handle LinkedIn v2 API response format
+		if (o.firstName && o.firstName.localized) {
+			var locale = Object.keys(o.firstName.localized)[0];
+			o.first_name = o.firstName.localized[locale];
+		}
+		if (o.lastName && o.lastName.localized) {
+			var locale = Object.keys(o.lastName.localized)[0];
+			o.last_name = o.lastName.localized[locale];
+		}
+		
+		// Fallback for older API format
+		o.first_name = o.first_name || o.firstName;
+		o.last_name = o.last_name || o.lastName;
 		o.name = o.formattedName || (o.first_name + ' ' + o.last_name);
-		o.thumbnail = o.pictureUrl;
+		
+		// Handle profile picture from v2 API
+		if (o.profilePicture && o.profilePicture['displayImage~'] && o.profilePicture['displayImage~'].elements) {
+			var elements = o.profilePicture['displayImage~'].elements;
+			if (elements.length > 0 && elements[0].identifiers && elements[0].identifiers.length > 0) {
+				o.thumbnail = elements[0].identifiers[0].identifier;
+			}
+		}
+		
+		// Fallback for older API format
+		o.thumbnail = o.thumbnail || o.pictureUrl;
 		o.email = o.emailAddress;
 		return o;
 	}
@@ -182,12 +209,9 @@
 	}
 
 	function formatQuery(qs) {
-		// LinkedIn signs requests with the parameter 'oauth2_access_token'
-		// ... yeah another one who thinks they should be different!
-		if (qs.access_token) {
-			qs.oauth2_access_token = qs.access_token;
-			delete qs.access_token;
-		}
+		// LinkedIn v2 API uses standard 'access_token' parameter
+		// Keep the access_token as is for v2 API compatibility
+		// No need to rename to oauth2_access_token for v2 API
 	}
 
 	function like(p, callback) {
