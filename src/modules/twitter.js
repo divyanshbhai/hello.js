@@ -135,8 +135,8 @@
 			},
 			xhr: function(p) {
 
-				// Rely on the proxy for non-GET requests.
-				return (p.method !== 'get');
+				// Twitter uses OAuth1, so always use proxy for signing
+				return true;
 			}
 		}
 	});
