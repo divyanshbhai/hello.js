@@ -25,8 +25,16 @@ hello.on('auth.login', function(r){
 hello.init({
 	'linkedin' : LINKEDIN_CLIENT_ID,
 },{
-	scope : ['friends','email'],
+	scope : ['basic','email'],  // Updated to use current LinkedIn scopes
 	redirect_uri:'../redirect.html',
 	oauth_proxy: OAUTH_PROXY_URL
+});
+
+// Add error handling for better user experience
+hello.on('auth.failed', function(error) {
+	console.error('LinkedIn auth failed:', error);
+	if (error.error && error.error.message) {
+		alert('LinkedIn login failed: ' + error.error.message);
+	}
 });
 </script>
