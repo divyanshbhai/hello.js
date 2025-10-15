@@ -1420,6 +1420,18 @@ hello.utils.extend(hello.utils, {
 		}
 
 		function isValidUrl(url) {
+			// Prevent XSS attacks by only allowing HTTP/HTTPS protocols
+			// Explicitly reject javascript:, data:, vbscript:, and other dangerous schemes
+			if (!url || typeof url !== 'string') {
+				return false;
+			}
+			
+			// Check for dangerous protocols
+			var dangerousProtocols = /^(javascript|data|vbscript|file|about):/i;
+			if (dangerousProtocols.test(url)) {
+				return false;
+			}
+			
 			var regexp = /^https?:/;
 			return regexp.test(url)
 
