@@ -36,6 +36,8 @@
                 log('✅ Login successful!');
                 log('Network: ' + auth.network);
                 log('Access token present: ' + (auth.authResponse.access_token ? 'Yes' : 'No'));
+                log('OAuth version: ' + (auth.authResponse.oauth ? auth.authResponse.oauth.version : 'N/A'));
+                log('Token expires: ' + (auth.authResponse.expires ? new Date(auth.authResponse.expires * 1000).toLocaleString() : 'Never'));
                 
                 document.getElementById('api-btn').disabled = false;
                 document.getElementById('logout-btn').disabled = false;
@@ -43,11 +45,23 @@
                 
             }, function(error) {
                 log('❌ Login failed: ' + (error.error ? error.error.message : 'Unknown error'));
+                if (error.error && error.error.code) {
+                    log('Error code: ' + error.error.code);
+                }
             });
         }
 
         function testTwitterAPI() {
             log('Testing Twitter API call (/me)...');
+            
+            // Check if we have a valid access token first
+            var authResponse = hello('twitter').getAuthResponse();
+            if (!authResponse || !authResponse.access_token) {
+                log('❌ No valid access token found. Please login first.');
+                return;
+            }
+            
+            log('Using OAuth1 access token: ' + authResponse.access_token.substring(0, 10) + '...');
             
             hello('twitter').api('me').then(function(profile) {
                 log('✅ API call successful!');
@@ -58,10 +72,14 @@
                     '<img src="' + profile.thumbnail + '" alt="Profile picture" style="width:50px;height:50px;border-radius:25px;">' +
                     '<p><strong>Name:</strong> ' + profile.name + '</p>' +
                     '<p><strong>Screen Name:</strong> @' + profile.screen_name + '</p>' +
-                    '<p><strong>ID:</strong> ' + profile.id + '</p>';
+                    '<p><strong>ID:</strong> ' + profile.id + '</p>' +
+                    '<p><strong>OAuth Version:</strong> ' + (authResponse.oauth ? authResponse.oauth.version : 'N/A') + '</p>';
                     
             }, function(error) {
                 log('❌ API call failed: ' + (error.error ? error.error.message : 'Unknown error'));
+                if (error.error && error.error.code === 'unauthorized') {
+                    log('💡 This appears to be an OAuth1 authentication issue. The access token may be invalid or expired.');
+                }
                 console.error('API Error:', error);
             });
         }
