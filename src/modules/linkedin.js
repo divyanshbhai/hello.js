@@ -13,6 +13,17 @@
 
 			// Refresh the access_token once expired
 			refresh: true,
+			
+			// LinkedIn-specific login parameters
+			login: function(p) {
+				// Ensure proper LinkedIn OAuth2 parameters
+				if (p.qs) {
+					// LinkedIn requires specific state parameter format
+					if (typeof p.qs.state === 'object') {
+						p.qs.state.oauth_proxy = p.qs.state.oauth_proxy || 'https://auth-server.herokuapp.com/proxy';
+					}
+				}
+			},
 
 			scope: {
 				basic: 'r_liteprofile',
@@ -129,12 +140,18 @@
 					formatQuery(qs);
 					p.headers['Content-Type'] = 'application/json';
 
-					// Note: x-li-format ensures error responses are not returned in XML
-					p.headers['x-li-format'] = 'json';
+					// LinkedIn v2 API headers
+					p.headers['LinkedIn-Version'] = '202310';
+					p.headers['X-Restli-Protocol-Version'] = '2.0.0';
 					p.proxy = true;
 					return true;
 				}
-
+				
+				// For GET requests, add LinkedIn API version headers
+				p.headers = p.headers || {};
+				p.headers['LinkedIn-Version'] = '202310';
+				p.headers['X-Restli-Protocol-Version'] = '2.0.0';
+				
 				return false;
 			}
 		}
@@ -143,8 +160,26 @@
 	function formatError(o) {
 		if (o && 'errorCode' in o) {
 			o.error = {
-				code: o.status,
+				code: o.status || o.errorCode,
 				message: o.message
+			};
+		}
+		// Handle LinkedIn v2 API error format
+		else if (o && o.error) {
+			if (typeof o.error === 'string') {
+				o.error = {
+					code: o.error,
+					message: o.error_description || o.error
+				};
+			}
+		}
+		// Handle "Unknown authentication scheme" error specifically
+		else if (o && typeof o === 'string' && o.indexOf('Unknown authentication scheme') !== -1) {
+			o = {
+				error: {
+					code: 'invalid_authentication',
+					message: 'LinkedIn authentication failed. Please check your client ID and ensure it is registered with the OAuth proxy.'
+				}
 			};
 		}
 	}

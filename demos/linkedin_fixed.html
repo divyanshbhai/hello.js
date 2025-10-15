@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LinkedIn OAuth Fixed Demo</title>
+    <link rel="stylesheet" href="/adorn/adorn.css"/>
+    <script src="/adorn/adorn.js" async></script>
+    <script src="client_ids.js"></script>
+    <script src="../src/hello.polyfill.js"></script>
+    <script src="../src/hello.js"></script>
+    <script src="../src/modules/linkedin.js"></script>
+    <style>
+        .status { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>LinkedIn OAuth Fixed Demo</h1>
+    
+    <div class="info status">
+        <strong>Instructions:</strong>
+        <ol>
+            <li>Make sure your LinkedIn app is registered at <a href="https://auth-server.herokuapp.com/" target="_blank">https://auth-server.herokuapp.com/</a></li>
+            <li>Ensure your LinkedIn app has the correct redirect URI configured</li>
+            <li>Use the updated scopes: r_liteprofile, r_emailaddress, w_member_social</li>
+        </ol>
+    </div>
+    
+    <button id='login' onclick="loginToLinkedIn();">Login with LinkedIn</button>
+    <button id='logout' onclick="logoutFromLinkedIn();" style="display:none;">Logout</button>
+    
+    <div id="result"></div>
+    <div id="profile" style="display:none;">
+        <h3>Profile Information:</h3>
+        <div id="profile-content"></div>
+    </div>
+    
+    <script class="pre">
+        function updateStatus(message, type) {
+            const result = document.getElementById('result');
+            result.innerHTML = '<div class="status ' + type + '">' + message + '</div>';
+        }
+        
+        function loginToLinkedIn() {
+            updateStatus('Initiating LinkedIn login...', 'info');
+            
+            hello('linkedin').login({
+                scope: ['basic', 'email']
+            }).then(function(auth) {
+                updateStatus('Login successful! Loading profile...', 'success');
+                document.getElementById('login').style.display = 'none';
+                document.getElementById('logout').style.display = 'inline-block';
+                
+                // Load profile information
+                return hello('linkedin').api('me');
+            }).then(function(profile) {
+                updateStatus('Profile loaded successfully!', 'success');
+                displayProfile(profile);
+            }).catch(function(error) {
+                console.error('LinkedIn login error:', error);
+                let errorMessage = 'Login failed: ';
+                if (error.error && error.error.message) {
+                    errorMessage += error.error.message;
+                } else if (typeof error === 'string') {
+                    errorMessage += error;
+                } else {
+                    errorMessage += JSON.stringify(error);
+                }
+                updateStatus(errorMessage, 'error');
+            });
+        }
+        
+        function logoutFromLinkedIn() {
+            hello('linkedin').logout().then(function() {
+                updateStatus('Logged out successfully', 'success');
+                document.getElementById('login').style.display = 'inline-block';
+                document.getElementById('logout').style.display = 'none';
+                document.getElementById('profile').style.display = 'none';
+            });
+        }
+        
+        function displayProfile(profile) {
+            const profileDiv = document.getElementById('profile');
+            const contentDiv = document.getElementById('profile-content');
+            
+            let html = '<table border="1" cellpadding="5">';
+            html += '<tr><td><strong>ID:</strong></td><td>' + (profile.id || 'N/A') + '</td></tr>';
+            html += '<tr><td><strong>Name:</strong></td><td>' + (profile.name || 'N/A') + '</td></tr>';
+            html += '<tr><td><strong>First Name:</strong></td><td>' + (profile.first_name || 'N/A') + '</td></tr>';
+            html += '<tr><td><strong>Last Name:</strong></td><td>' + (profile.last_name || 'N/A') + '</td></tr>';
+            html += '<tr><td><strong>Email:</strong></td><td>' + (profile.email || 'N/A') + '</td></tr>';
+            if (profile.thumbnail) {
+                html += '<tr><td><strong>Picture:</strong></td><td><img src="' + profile.thumbnail + '" width="100" alt="Profile Picture"></td></tr>';
+            }
+            html += '</table>';
+            
+            contentDiv.innerHTML = html;
+            profileDiv.style.display = 'block';
+        }
+        
+        // Event listeners
+        hello.on('auth.login', function(auth) {
+            console.log('Auth login event:', auth);
+            if (auth.network === 'linkedin') {
+                updateStatus('Authentication successful for ' + auth.network, 'success');
+            }
+        });
+        
+        hello.on('auth.logout', function(auth) {
+            console.log('Auth logout event:', auth);
+            if (auth.network === 'linkedin') {
+                updateStatus('Logged out from ' + auth.network, 'info');
+            }
+        });
+        
+        hello.on('auth.failed', function(error) {
+            console.error('Auth failed event:', error);
+            updateStatus('Authentication failed: ' + (error.error ? error.error.message : JSON.stringify(error)), 'error');
+        });
+        
+        // Initialize hello.js
+        hello.init({
+            'linkedin': LINKEDIN_CLIENT_ID || 'your-linkedin-client-id'
+        }, {
+            scope: ['basic', 'email'],
+            redirect_uri: '../redirect.html',
+            oauth_proxy: OAUTH_PROXY_URL || 'https://auth-server.herokuapp.com/proxy'
+        });
+        
+        // Check if already logged in
+        const session = hello('linkedin').getAuthResponse();
+        if (session && session.access_token) {
+            updateStatus('Already logged in to LinkedIn', 'success');
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('logout').style.display = 'inline-block';
+        }
+    </script>
+</body>
+</html>
