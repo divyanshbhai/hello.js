@@ -1379,6 +1379,23 @@ hello.utils.extend(hello.utils, {
 				authCallback(p, window, parent);
 			}
 
+			// OAuth1 token? (Twitter uses oauth_token instead of access_token)
+			else if (('oauth_token' in p && p.oauth_token) && p.network) {
+
+				// For OAuth1, map oauth_token to access_token for consistency
+				p.access_token = p.oauth_token;
+
+				// OAuth1 tokens typically don't expire, set a long expiry
+				p.expires_in = 60 * 60 * 24 * 365; // 1 year
+				p.expires = ((new Date()).getTime() / 1e3) + p.expires_in;
+
+				// Store OAuth version for later use
+				p.oauth = p.oauth || {version: '1.0a'};
+
+				// Lets use the "state" to assign it to one of our networks
+				authCallback(p, window, parent);
+			}
+
 			// Error=?
 			// &error_description=?
 			// &state=?
