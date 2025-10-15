@@ -17,10 +17,10 @@
 			refresh: true,
 
 			scope: {
-				basic: 'basic',
-				photos: '',
-				friends: 'relationships',
-				publish: 'likes comments',
+				basic: 'user_profile',
+				photos: 'user_media',
+				media: 'user_media',
+				profile: 'user_profile',
 				email: '',
 				share: '',
 				publish_files: '',
@@ -31,69 +31,68 @@
 
 			scope_delim: ' ',
 
-			base: 'https://api.instagram.com/v1/',
+			base: 'https://graph.instagram.com/',
 
 			get: {
-				me: 'users/self',
-				'me/feed': 'users/self/feed?count=@{limit|100}',
-				'me/photos': 'users/self/media/recent?min_id=0&count=@{limit|100}',
-				'me/friends': 'users/self/follows?count=@{limit|100}',
-				'me/following': 'users/self/follows?count=@{limit|100}',
-				'me/followers': 'users/self/followed-by?count=@{limit|100}',
-				'friend/photos': 'users/@{id}/media/recent?min_id=0&count=@{limit|100}'
+				me: 'me?fields=id,username,account_type,media_count',
+				'me/photos': 'me/media?fields=id,media_type,media_url,thumbnail_url,caption,timestamp&limit=@{limit|25}',
+				'me/media': 'me/media?fields=id,media_type,media_url,thumbnail_url,caption,timestamp&limit=@{limit|25}'
 			},
 
-			post: {
-				'me/like': function(p, callback) {
-					var id = p.data.id;
-					p.data = {};
-					callback('media/' + id + '/likes');
-				}
-			},
 
-			del: {
-				'me/like': 'media/@{id}/likes'
-			},
 
 			wrap: {
 				me: function(o) {
 
 					formatError(o);
 
-					if ('data' in o) {
-						o.id = o.data.id;
-						o.thumbnail = o.data.profile_picture;
-						o.name = o.data.full_name || o.data.username;
+					if (o && o.id) {
+						// Instagram Basic Display API returns user data directly
+						o.name = o.username;
+						o.thumbnail = ''; // Profile picture not available in Basic Display API
 					}
 
 					return o;
 				},
 
-				'me/friends': formatFriends,
-				'me/following': formatFriends,
-				'me/followers': formatFriends,
 				'me/photos': function(o) {
 
 					formatError(o);
 					paging(o);
 
 					if ('data' in o) {
+						// Filter for images and videos
 						o.data = o.data.filter(function(d) {
-							return d.type === 'image';
+							return d.media_type === 'IMAGE' || d.media_type === 'VIDEO' || d.media_type === 'CAROUSEL_ALBUM';
 						});
 
 						o.data.forEach(function(d) {
-							d.name = d.caption ? d.caption.text : null;
-							d.thumbnail = d.images.thumbnail.url;
-							d.picture = d.images.standard_resolution.url;
-							d.pictures = Object.keys(d.images)
-								.map(function(key) {
-									var image = d.images[key];
-									return formatImage(image);
-								})
-								.sort(function(a, b) {
-									return a.width - b.width;
-								});
+							d.name = d.caption || '';
+							d.thumbnail = d.thumbnail_url || d.media_url;
+							d.picture = d.media_url;
+							d.source = d.media_url;
+						});
+					}
+
+					return o;
+				},
+
+				'me/media': function(o) {
+
+					formatError(o);
+					paging(o);
+
+					if ('data' in o) {
+						// Filter for images and videos
+						o.data = o.data.filter(function(d) {
+							return d.media_type === 'IMAGE' || d.media_type === 'VIDEO' || d.media_type === 'CAROUSEL_ALBUM';
+						});
+
+						o.data.forEach(function(d) {
+							d.name = d.caption || '';
+							d.thumbnail = d.thumbnail_url || d.media_url;
+							d.picture = d.media_url;
+							d.source = d.media_url;
 						});
 					}
 
@@ -162,29 +161,13 @@
 		return o;
 	}
 
-	function formatFriends(o) {
-		paging(o);
-		if (o && 'data' in o) {
-			o.data.forEach(formatFriend);
-		}
 
-		return o;
-	}
 
-	function formatFriend(o) {
-		if (o.id) {
-			o.thumbnail = o.profile_picture;
-			o.name = o.full_name || o.username;
-		}
-	}
-
-	// See: http://instagram.com/developer/endpoints/
+	// See: https://developers.facebook.com/docs/instagram-basic-display-api/
 	function paging(res) {
-		if ('pagination' in res) {
-			res.paging = {
-				next: res.pagination.next_url
-			};
-			delete res.pagination;
+		if ('paging' in res && res.paging && res.paging.next) {
+			// Instagram Basic Display API already uses the correct paging format
+			// No transformation needed
 		}
 	}
 
