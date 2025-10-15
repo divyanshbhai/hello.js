@@ -1355,9 +1355,20 @@ hello.utils.extend(hello.utils, {
 			// Amazon returns state in a double-encoded format that needs special handling
 			var isAmazon = p && p.state && typeof p.state === 'string' && p.state.indexOf('amazon') !== -1;
 			if (isAmazon) {
-				// Amazon requires special decoding: decodeURIComponent(escape()) and HTML entity replacement
-				pState = decodeURIComponent(escape(p.state));
-				pState = pState.replace(/&#34;/g, '"');
+				try {
+					// Amazon requires special decoding: decodeURIComponent(escape()) and HTML entity replacement
+					pState = decodeURIComponent(escape(p.state));
+					// Replace common HTML entities that Amazon might use
+					pState = pState.replace(/&#34;/g, '"');
+					pState = pState.replace(/&#39;/g, "'");
+					pState = pState.replace(/&amp;/g, '&');
+					pState = pState.replace(/&lt;/g, '<');
+					pState = pState.replace(/&gt;/g, '>');
+				} catch (decodeError) {
+					// If Amazon-specific decoding fails, fall back to original state
+					console.warn('Amazon state decoding failed, using original state:', decodeError);
+					pState = p.state;
+				}
 			} else {
 				pState = p.state;
 			}
