@@ -1552,7 +1552,21 @@ hello.utils.extend(hello.utils, {
 
 			// If this page is still open
 			if (p.page_uri && isValidUrl(p.page_uri)) {
-				location.assign(p.page_uri);
+				try {
+					var targetUrl = new URL(p.page_uri, location.href);
+					var currentUrl = new URL(location.href);
+					if (targetUrl.origin === currentUrl.origin && targetUrl.pathname === currentUrl.pathname) {
+						var newPath = targetUrl.pathname + targetUrl.search + targetUrl.hash;
+						var currPath = currentUrl.pathname + currentUrl.search + currentUrl.hash;
+						if (newPath !== currPath && window.history && window.history.replaceState) {
+							window.history.replaceState(null, document.title, newPath);
+						}
+					} else {
+						location.assign(p.page_uri);
+					}
+				} catch (e) {
+					location.assign(p.page_uri);
+				}
 			}
 		}
 
