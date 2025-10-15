@@ -2057,7 +2057,8 @@ hello.utils.extend(hello.utils, {
 			if (p.authResponse && p.authResponse.oauth && parseInt(p.authResponse.oauth.version, 10) === 1) {
 
 				// OAUTH SIGNING PROXY
-				sign = p.query.access_token;
+				// Use access_token from query or from authResponse
+				sign = p.query.access_token || p.authResponse.access_token;
 
 				// Remove the access_token
 				delete p.query.access_token;
