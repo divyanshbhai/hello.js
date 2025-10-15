@@ -1307,6 +1307,12 @@ hello.utils.extend(hello.utils, {
 		if (p && p.state && (p.code || p.oauth_token)) {
 
 			try {
+				// Additional security: validate state parameter before parsing
+				if (typeof p.state !== 'string' || p.state.length > 10000) {
+					console.error('Invalid state parameter');
+					return;
+				}
+				
 				var state = JSON.parse(p.state);
 
 				// Add this path as the redirect_uri
