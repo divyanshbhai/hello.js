@@ -1455,7 +1455,29 @@ hello.utils.extend(hello.utils, {
 
 			// If this page is still open
 			if (p.page_uri && isValidUrl(p.page_uri)) {
-				location.assign(p.page_uri);
+				// Prevent double reloads in SPA setups (e.g. Azure B2C)
+				// If the target page URI is the same origin and path as the current
+				// location, avoid a full navigation which causes a reload. Instead,
+				// update the URL (search/hash) via history.replaceState so SPA routers
+				// can pick up the state without reloading the page.
+				try {
+					var targetUrl = new URL(p.page_uri, location.href);
+					var currentUrl = new URL(location.href);
+					if (targetUrl.origin === currentUrl.origin && targetUrl.pathname === currentUrl.pathname) {
+						// Only update search/hash if they differ
+						var newPath = targetUrl.pathname + targetUrl.search + targetUrl.hash;
+						var currPath = currentUrl.pathname + currentUrl.search + currentUrl.hash;
+						if (newPath !== currPath && window.history && window.history.replaceState) {
+							window.history.replaceState(null, document.title, newPath);
+						}
+						// Skip location.assign to avoid another load
+					} else {
+						location.assign(p.page_uri);
+					}
+				} catch (e) {
+					// If URL parsing fails for any reason, fall back to navigation
+					location.assign(p.page_uri);
+				}
 			}
 		}
 
